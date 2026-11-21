@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
+import { CasesModule } from './cases/cases.module';
 import configuration from './config/configuration';
 import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
@@ -28,6 +29,7 @@ import { UsersModule } from './users/users.module';
     DepartmentAdminsModule,
     MembersModule,
     HandoffRulesModule,
+    CasesModule,
   ],
 })
 export class AppModule {}

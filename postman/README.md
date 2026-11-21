@@ -18,8 +18,9 @@ Seed password: `Workspace@123`
 1. Health check / probe  
 2. Login — Superadmin → Me → Admin ping  
 3. Organization → List departments / members / handoff rules  
-4. Login — Ayesha → List members (CCS only) → Add member (expect 403)  
-5. Login — Client → Admin ping (expect 403)  
+4. Cases → List / create / illegal 422 / handoff  
+5. Login — Ayesha → List members (CCS only) → Case detail seed FIN (403)  
+6. Login — Client → Admin ping (expect 403)  
 
 Avoid **Change password — Hamza** unless you intend to mutate the seed user (or restore the hash afterwards).
 

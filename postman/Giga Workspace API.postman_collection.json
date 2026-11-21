@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Giga Workspace API",
-    "description": "Client Services Workspace API (NestJS).\n\nPhases covered: 0 (health) + 1 (auth/roles) + 2 (departments/members/handoff).\nBase path: {{baseUrl}} = http://localhost:3001/api/v1\n\nSeed password for all demo users: Workspace@123\nLogin → Superadmin saves {{accessToken}} automatically.\nLogin → Ayesha saves {{ayeshaToken}} for dept-admin scoping checks.",
+    "description": "Client Services Workspace API (NestJS).\n\nPhases covered: 0–3 (health, auth, org, cases).\nBase path: {{baseUrl}} = http://localhost:3001/api/v1\n\nSeed password for all demo users: Workspace@123\nLogin → Superadmin saves {{accessToken}} automatically.\nLogin → Ayesha saves {{ayeshaToken}} for dept-admin scoping checks.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -10,7 +10,8 @@
     { "key": "accessToken", "value": "" },
     { "key": "hamzaToken", "value": "" },
     { "key": "clientToken", "value": "" },
-    { "key": "ayeshaToken", "value": "" }
+    { "key": "ayeshaToken", "value": "" },
+    { "key": "caseId", "value": "1" }
   ],
   "auth": {
     "type": "bearer",
@@ -496,6 +497,175 @@
             },
             "url": "{{baseUrl}}/departments/1",
             "description": "Superadmin only. Keeps FIN active (safe smoke)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cases",
+      "item": [
+        {
+          "name": "Login Superadmin (for cases)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', j.accessToken);",
+                  "  pm.environment.set('accessToken', j.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "List cases",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('has data', () => pm.expect(j.data).to.be.an('array'));",
+                  "if (j.data[0]) pm.collectionVariables.set('caseId', String(j.data[0].id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cases?queue=all&page=1"
+          }
+        },
+        {
+          "name": "Get case detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cases/{{caseId}}"
+          }
+        },
+        {
+          "name": "Create case",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.id) pm.collectionVariables.set('caseId', String(j.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"2\",\n  \"priority\": \"Normal\",\n  \"sourceClientId\": 5,\n  \"note\": \"Opened from Postman\"\n}"
+            },
+            "url": "{{baseUrl}}/cases"
+          }
+        },
+        {
+          "name": "Illegal transition (expect 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Resolved\"\n}"
+            },
+            "url": "{{baseUrl}}/cases/{{caseId}}",
+            "description": "From New, Resolved is illegal → 422."
+          }
+        },
+        {
+          "name": "Add note",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Internal note\",\n  \"clientVisible\": false\n}"
+            },
+            "url": "{{baseUrl}}/cases/{{caseId}}/notes"
+          }
+        },
+        {
+          "name": "Handoff case to CCS",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toDepartmentId\": \"2\",\n  \"note\": \"Please review\"\n}"
+            },
+            "url": "{{baseUrl}}/cases/{{caseId}}/handoff"
+          }
+        },
+        {
+          "name": "Export cases CSV",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cases/export?queue=all"
+          }
+        },
+        {
+          "name": "Case detail — Ayesha wrong dept (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ayeshaToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/cases/1",
+            "description": "Seed FIN case; CCS admin should get 403. Run Organization → Login Ayesha first if needed."
           }
         }
       ]
