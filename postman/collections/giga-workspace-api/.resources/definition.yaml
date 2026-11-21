@@ -1,0 +1,28 @@
+$kind: collection
+name: Giga Workspace API
+description: |-
+  NestJS Client Services Workspace API.
+  Keep this tree updated each phase. For one-click Import into Postman Desktop,
+  also refresh postman/Giga Workspace API.postman_collection.json.
+variables:
+  - key: baseUrl
+    value: 'http://localhost:3001/api/v1'
+  - key: accessToken
+    value: ''
+  - key: hamzaToken
+    value: ''
+  - key: clientToken
+    value: ''
+  - key: password
+    value: 'Workspace@123'
+  - key: superadminEmail
+    value: muhammad.ali@gigagroup.pk
+  - key: hamzaEmail
+    value: hamza.qureshi@gigagroup.pk
+  - key: clientEmail
+    value: client.1@workspace.local
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'

@@ -1,0 +1,18 @@
+$kind: http-request
+name: Health check
+order: 1000
+method: GET
+url: '{{baseUrl}}/health'
+auth:
+  type: noauth
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      pm.test('both connections ok', () => {
+        const j = pm.response.json();
+        pm.expect(j.status).to.eql('ok');
+        pm.expect(j.connections.workspace.ok).to.be.true;
+        pm.expect(j.connections.source.ok).to.be.true;
+      });

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "sql": {
+      "command": "D:\\Projects\\MCPS\\mysql\\mysql-mcp\\venv\\Scripts\\python.exe",
+      "args": ["D:\\Projects\\MCPS\\mysql\\mysql-mcp\\sql.py"]
+    }
+  }
+}

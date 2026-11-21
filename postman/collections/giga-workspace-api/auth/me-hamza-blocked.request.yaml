@@ -1,0 +1,15 @@
+$kind: http-request
+name: 'Me — Hamza (expect 403 until password change)'
+order: 5000
+method: GET
+url: '{{baseUrl}}/auth/me'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{hamzaToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 403 password change required', () => pm.response.to.have.status(403));

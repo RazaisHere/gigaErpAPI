@@ -1,0 +1,27 @@
+$kind: http-request
+name: Login — Hamza (must change password)
+order: 2000
+method: POST
+url: '{{baseUrl}}/auth/login'
+auth:
+  type: noauth
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{hamzaEmail}}",
+      "password": "{{password}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('mustChangePassword true', () => pm.expect(j.user.mustChangePassword).to.be.true);
+      if (j.accessToken) {
+        pm.collectionVariables.set('hamzaToken', j.accessToken);
+      }

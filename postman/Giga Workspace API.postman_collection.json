@@ -1,0 +1,322 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Giga Workspace API",
+    "description": "Client Services Workspace API (NestJS).\n\nPhases covered: 0 (health) + 1 (auth/roles).\nBase path: {{baseUrl}} = http://localhost:3001/api/v1\n\nSeed password for all demo users: Workspace@123\nLogin → Superadmin saves {{accessToken}} automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3001/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "hamzaToken", "value": "" },
+    { "key": "clientToken", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('both connections ok', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.status).to.eql('ok');",
+                  "  pm.expect(j.connections.workspace.ok).to.be.true;",
+                  "  pm.expect(j.connections.source.ok).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health",
+            "description": "SELECT 1 on workspace + source connections."
+          }
+        },
+        {
+          "name": "Health probe (src_projects)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('src_projects count is 4', () => {",
+                  "  const j = pm.response.json();",
+                  "  pm.expect(j.count).to.eql(4);",
+                  "  pm.expect(j.ok).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/health/probe",
+            "description": "Live ERP view row count via src_projects."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login — Superadmin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('superadmin role', () => pm.expect(j.user.role.code).to.eql('superadmin'));",
+                  "if (j.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', j.accessToken);",
+                  "  pm.environment.set('accessToken', j.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login",
+            "description": "Saves accessToken into collection + environment variables."
+          }
+        },
+        {
+          "name": "Login — Hamza (must change password)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('mustChangePassword true', () => pm.expect(j.user.mustChangePassword).to.be.true);",
+                  "pm.test('department FIN', () => pm.expect(j.user.department.code).to.eql('FIN'));",
+                  "if (j.accessToken) {",
+                  "  pm.collectionVariables.set('hamzaToken', j.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{hamzaEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Login — Client",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('client role', () => pm.expect(j.user.role.code).to.eql('client'));",
+                  "if (j.accessToken) {",
+                  "  pm.collectionVariables.set('clientToken', j.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{clientEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Me (current user)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has email', () => pm.expect(pm.response.json().email).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/me",
+            "description": "Uses collection bearer {{accessToken}}. Run Login — Superadmin first."
+          }
+        },
+        {
+          "name": "Me — Hamza (expect 403 until password change)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403 password change required', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{hamzaToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/auth/me",
+            "description": "Run Login — Hamza first. MustChangePasswordGuard blocks /me."
+          }
+        },
+        {
+          "name": "Change password — Hamza",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.accessToken) {",
+                  "  pm.collectionVariables.set('hamzaToken', j.accessToken);",
+                  "}",
+                  "pm.test('mustChangePassword cleared', () => pm.expect(j.user.mustChangePassword).to.be.false);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{hamzaToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"{{password}}\",\n  \"newPassword\": \"TempPhase1@999\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/change-password",
+            "description": "WARNING: changes Hamza's DB password. Re-seed or restore hash afterwards if you need Workspace@123 again."
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ok', () => pm.expect(pm.response.json().ok).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/auth/logout",
+            "description": "Stateless JWT — client should discard the token after this."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Admin ping (staff)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('ok', () => pm.expect(pm.response.json().ok).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/ping",
+            "description": "Requires superadmin | department_admin | employee. Run Login — Superadmin first."
+          }
+        },
+        {
+          "name": "Admin ping — Client (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{clientToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/admin/ping",
+            "description": "Run Login — Client first. RolesGuard rejects client."
+          }
+        }
+      ]
+    }
+  ]
+}
