@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CognitoModule } from '../cognito/cognito.module';
 import { Department } from '../users/entities/department.entity';
 import { DepartmentUser } from '../users/entities/department-user.entity';
 import { Role } from '../users/entities/role.entity';
@@ -10,6 +11,7 @@ import { MembersService } from './members.service';
 
 @Module({
   imports: [
+    CognitoModule,
     TypeOrmModule.forFeature(
       [User, Role, UserRole, Department, DepartmentUser],
       'workspace',

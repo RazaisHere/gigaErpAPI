@@ -13,4 +13,13 @@ export default () => ({
     secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN ?? '8h',
   },
+  auth: {
+    provider: (process.env.AUTH_PROVIDER ?? 'nest') as 'nest' | 'cognito',
+  },
+  cognito: {
+    region: process.env.COGNITO_REGION ?? process.env.AWS_REGION ?? 'ap-southeast-1',
+    userPoolId: process.env.COGNITO_USER_POOL_ID ?? '',
+    clientId: process.env.COGNITO_CLIENT_ID ?? '',
+    clientSecret: process.env.COGNITO_CLIENT_SECRET ?? '',
+  },
 });

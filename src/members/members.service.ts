@@ -8,14 +8,13 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RequestUser } from '../auth/types/jwt-payload';
 import { hashPassword } from '../auth/utils/password.util';
+import { UserIdentityService } from '../cognito/user-identity.service';
 import { Department } from '../users/entities/department.entity';
 import { DepartmentUser } from '../users/entities/department-user.entity';
 import { Role } from '../users/entities/role.entity';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/entities/user-role.entity';
 import { CreateMemberDto } from './dto/create-member.dto';
-
-const DEFAULT_TEMP_PASSWORD = 'Workspace@123';
 
 @Injectable()
 export class MembersService {
@@ -30,6 +29,7 @@ export class MembersService {
     private readonly departments: Repository<Department>,
     @InjectRepository(DepartmentUser, 'workspace')
     private readonly departmentUsers: Repository<DepartmentUser>,
+    private readonly identity: UserIdentityService,
   ) {}
 
   async listMembers(actor: RequestUser, departmentFilter?: string) {
@@ -112,20 +112,28 @@ export class MembersService {
       }
 
       const role = await this.requireRole('employee');
+      const tempPassword =
+        dto.temporaryPassword ?? this.identity.defaultTempPassword;
       user = await this.users.save(
         this.users.create({
           name: dto.name,
           email: dto.email.toLowerCase(),
           phone: dto.phone ?? null,
           employeeCode: dto.employeeCode ?? null,
-          password: await hashPassword(
-            dto.temporaryPassword ?? DEFAULT_TEMP_PASSWORD,
-          ),
+          password: await hashPassword(tempPassword),
           mustChangePassword: true,
           status: 'pending_first_login',
         }),
       );
       await this.userRoles.save(this.userRoles.create({ user, role }));
+      await this.identity.linkOrCreate({
+        userId: String(user.id),
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        password: tempPassword,
+        permanent: false,
+      });
     }
 
     const existingMembership = await this.departmentUsers.findOne({

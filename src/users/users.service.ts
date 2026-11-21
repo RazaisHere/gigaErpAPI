@@ -36,6 +36,28 @@ export class UsersService {
       .getOne();
   }
 
+  async findByEmailForAuth(email: string): Promise<User | null> {
+    return this.users
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.userRoles', 'userRoles')
+      .leftJoinAndSelect('userRoles.role', 'role')
+      .leftJoinAndSelect('user.departmentUsers', 'departmentUsers')
+      .leftJoinAndSelect('departmentUsers.department', 'department')
+      .where('user.email = :email', { email: email.toLowerCase() })
+      .getOne();
+  }
+
+  async findByCognitoSub(cognitoSub: string): Promise<User | null> {
+    return this.users
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.userRoles', 'userRoles')
+      .leftJoinAndSelect('userRoles.role', 'role')
+      .leftJoinAndSelect('user.departmentUsers', 'departmentUsers')
+      .leftJoinAndSelect('departmentUsers.department', 'department')
+      .where('user.cognitoSub = :cognitoSub', { cognitoSub })
+      .getOne();
+  }
+
   async findByIdForAuth(id: string): Promise<User | null> {
     return this.users
       .createQueryBuilder('user')
@@ -45,6 +67,21 @@ export class UsersService {
       .leftJoinAndSelect('departmentUsers.department', 'department')
       .where('user.id = :id', { id })
       .getOne();
+  }
+
+  async setCognitoSub(userId: string, cognitoSub: string): Promise<void> {
+    await this.users.update({ id: userId }, { cognitoSub });
+  }
+
+  async clearMustChangePassword(userId: string): Promise<void> {
+    await this.users.update(
+      { id: userId },
+      { mustChangePassword: false, status: 'active' },
+    );
+  }
+
+  async listAllForCognitoSync(): Promise<User[]> {
+    return this.users.find({ order: { id: 'ASC' } });
   }
 
   async findByIdWithPassword(id: string): Promise<User | null> {

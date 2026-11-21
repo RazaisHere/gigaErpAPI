@@ -124,6 +124,7 @@ CREATE TABLE users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NOT NULL,
+  cognito_sub VARCHAR(36) NULL,
   password VARCHAR(255) NOT NULL,
   phone VARCHAR(30) NULL,
   employee_code VARCHAR(20) NULL,
@@ -134,6 +135,7 @@ CREATE TABLE users (
   updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY users_email_unique (email),
+  UNIQUE KEY users_cognito_sub_unique (cognito_sub),
   UNIQUE KEY users_employee_code_unique (employee_code)
 ) ENGINE=InnoDB;
 

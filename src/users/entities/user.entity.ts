@@ -20,6 +20,15 @@ export class User {
   @Column({ type: 'varchar', length: 255, unique: true })
   email!: string;
 
+  @Column({
+    name: 'cognito_sub',
+    type: 'varchar',
+    length: 36,
+    unique: true,
+    nullable: true,
+  })
+  cognitoSub!: string | null;
+
   @Column({ type: 'varchar', length: 255, select: false })
   password!: string;
 

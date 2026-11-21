@@ -94,6 +94,13 @@
                   "if (j.accessToken) {",
                   "  pm.collectionVariables.set('accessToken', j.accessToken);",
                   "  pm.environment.set('accessToken', j.accessToken);",
+                  "}",
+                  "if (j.refreshToken) {",
+                  "  pm.collectionVariables.set('refreshToken', j.refreshToken);",
+                  "  pm.environment.set('refreshToken', j.refreshToken);",
+                  "}",
+                  "if (j.session) {",
+                  "  pm.collectionVariables.set('cognitoSession', j.session);",
                   "}"
                 ]
               }
@@ -108,7 +115,98 @@
               "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"password\": \"{{password}}\"\n}"
             },
             "url": "{{baseUrl}}/auth/login",
-            "description": "Saves accessToken into collection + environment variables."
+            "description": "Nest JWT when AUTH_PROVIDER=nest; Cognito access/id/refresh when cognito. Saves accessToken (+ refreshToken if present)."
+          }
+        },
+        {
+          "name": "Complete new password (Cognito)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', j.accessToken);",
+                  "  pm.environment.set('accessToken', j.accessToken);",
+                  "}",
+                  "if (j.refreshToken) {",
+                  "  pm.collectionVariables.set('refreshToken', j.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{hamzaEmail}}\",\n  \"newPassword\": \"Workspace@1234\",\n  \"session\": \"{{cognitoSession}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/complete-new-password",
+            "description": "AUTH_PROVIDER=cognito only. Use session from a NEW_PASSWORD_REQUIRED login response."
+          }
+        },
+        {
+          "name": "Refresh token (Cognito)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', j.accessToken);",
+                  "  pm.environment.set('accessToken', j.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/refresh",
+            "description": "AUTH_PROVIDER=cognito only."
+          }
+        },
+        {
+          "name": "Forgot password (Cognito)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "description": "AUTH_PROVIDER=cognito only. Sends Cognito reset code via pool email/SMS."
+          }
+        },
+        {
+          "name": "Confirm forgot password (Cognito)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"code\": \"123456\",\n  \"newPassword\": \"Workspace@1234\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/confirm-forgot-password",
+            "description": "AUTH_PROVIDER=cognito only."
           }
         },
         {

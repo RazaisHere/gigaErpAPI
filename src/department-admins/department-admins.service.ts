@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { hashPassword } from '../auth/utils/password.util';
+import { UserIdentityService } from '../cognito/user-identity.service';
 import { Department } from '../users/entities/department.entity';
 import { DepartmentUser } from '../users/entities/department-user.entity';
 import { Role } from '../users/entities/role.entity';
@@ -13,8 +14,6 @@ import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/entities/user-role.entity';
 import { CreateDepartmentAdminDto } from './dto/create-department-admin.dto';
 import { UpdateDepartmentAdminDto } from './dto/update-department-admin.dto';
-
-const DEFAULT_TEMP_PASSWORD = 'Workspace@123';
 
 @Injectable()
 export class DepartmentAdminsService {
@@ -29,6 +28,7 @@ export class DepartmentAdminsService {
     private readonly departments: Repository<Department>,
     @InjectRepository(DepartmentUser, 'workspace')
     private readonly departmentUsers: Repository<DepartmentUser>,
+    private readonly identity: UserIdentityService,
   ) {}
 
   async findAll() {
@@ -54,9 +54,9 @@ export class DepartmentAdminsService {
     }
 
     const role = await this.requireRole('department_admin');
-    const passwordHash = await hashPassword(
-      dto.temporaryPassword ?? DEFAULT_TEMP_PASSWORD,
-    );
+    const tempPassword =
+      dto.temporaryPassword ?? this.identity.defaultTempPassword;
+    const passwordHash = await hashPassword(tempPassword);
 
     const user = await this.users.save(
       this.users.create({
@@ -79,6 +79,15 @@ export class DepartmentAdminsService {
         isAdmin: true,
       }),
     );
+
+    await this.identity.linkOrCreate({
+      userId: String(user.id),
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      password: tempPassword,
+      permanent: false,
+    });
 
     const loaded = await this.loadAdmin(String(user.id));
     return this.toResponse(loaded);
@@ -121,28 +130,35 @@ export class DepartmentAdminsService {
 
   async resetPassword(id: string) {
     const user = await this.loadAdmin(id);
-    user.password = await hashPassword(DEFAULT_TEMP_PASSWORD);
+    const tempPassword = this.identity.defaultTempPassword;
+    user.password = await hashPassword(tempPassword);
     user.mustChangePassword = true;
     if (user.status !== 'disabled') {
       user.status = 'pending_first_login';
     }
     await this.users.save(user);
+    await this.identity.resetPassword(user.email, tempPassword, false);
     return {
       ok: true,
       userId: String(user.id),
       mustChangePassword: true,
-      temporaryPasswordHint: 'Reset to default seed password; user must change on next login',
+      temporaryPasswordHint:
+        'Reset to default seed password; user must change on next login',
     };
   }
 
   async disable(id: string) {
-    return this.update(id, { status: 'disabled' });
+    const result = await this.update(id, { status: 'disabled' });
+    const user = await this.loadAdmin(id);
+    await this.identity.setEnabled(user.email, false);
+    return result;
   }
 
   async enable(id: string) {
     const user = await this.loadAdmin(id);
     user.status = user.mustChangePassword ? 'pending_first_login' : 'active';
     await this.users.save(user);
+    await this.identity.setEnabled(user.email, true);
     return this.toResponse(await this.loadAdmin(id));
   }
 

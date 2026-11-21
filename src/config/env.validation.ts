@@ -14,4 +14,24 @@ export const envValidationSchema = Joi.object({
   DB_NAME: Joi.string().default('giga_workspace'),
   JWT_SECRET: Joi.string().min(16).required(),
   JWT_EXPIRES_IN: Joi.string().default('8h'),
+  AUTH_PROVIDER: Joi.string().valid('nest', 'cognito').default('nest'),
+  COGNITO_REGION: Joi.string().when('AUTH_PROVIDER', {
+    is: 'cognito',
+    then: Joi.required(),
+    otherwise: Joi.optional().allow(''),
+  }),
+  COGNITO_USER_POOL_ID: Joi.string().when('AUTH_PROVIDER', {
+    is: 'cognito',
+    then: Joi.required(),
+    otherwise: Joi.optional().allow(''),
+  }),
+  COGNITO_CLIENT_ID: Joi.string().when('AUTH_PROVIDER', {
+    is: 'cognito',
+    then: Joi.required(),
+    otherwise: Joi.optional().allow(''),
+  }),
+  COGNITO_CLIENT_SECRET: Joi.string().optional().allow(''),
+  AWS_REGION: Joi.string().optional().allow(''),
+  AWS_ACCESS_KEY_ID: Joi.string().optional().allow(''),
+  AWS_SECRET_ACCESS_KEY: Joi.string().optional().allow(''),
 });

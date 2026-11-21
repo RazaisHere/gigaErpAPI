@@ -23,7 +23,17 @@ Seed password: `Workspace@123`
 6. Login — Ayesha → List members (CCS only) → Case detail seed FIN (403)  
 7. Login — Client → Admin ping (expect 403)  
 
-Facial recognition and client self-signup + SMTP OTP are **not** in these phases yet.  
+Facial recognition and client self-signup + SMTP OTP are **not** in these phases yet.
+
+### Cognito (optional)
+
+Default `AUTH_PROVIDER=nest` keeps local JWTs. To cut over:
+
+1. Create a Cognito user pool + app client with `ALLOW_ADMIN_USER_PASSWORD_AUTH` (and email as username/alias).
+2. Fill `COGNITO_*` + AWS credentials in `.env`.
+3. Run `npm run cognito:sync` (provisions seed users with permanent `Workspace@123`, writes `cognito_sub`).
+4. Set `AUTH_PROVIDER=cognito`, restart the API.
+5. Login responses return Cognito `accessToken` / `refreshToken` (use the Cognito Auth folder requests for refresh / forgot / complete-new-password).
 
 Avoid **Change password — Hamza** unless you intend to mutate the seed user (or restore the hash afterwards).
 
