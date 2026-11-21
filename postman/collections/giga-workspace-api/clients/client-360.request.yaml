@@ -1,0 +1,5 @@
+$kind: http-request
+name: Client 360
+order: 2000
+method: GET
+url: '{{baseUrl}}/clients/{{clientLinkId}}'

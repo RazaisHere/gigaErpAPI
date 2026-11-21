@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Giga Workspace API",
-    "description": "Client Services Workspace API (NestJS).\n\nPhases covered: 0–3 (health, auth, org, cases).\nBase path: {{baseUrl}} = http://localhost:3001/api/v1\n\nSeed password for all demo users: Workspace@123\nLogin → Superadmin saves {{accessToken}} automatically.\nLogin → Ayesha saves {{ayeshaToken}} for dept-admin scoping checks.",
+    "description": "Client Services Workspace API (NestJS).\n\nPhases covered: 0–4 (health, auth, org, cases, clients).\nBase path: {{baseUrl}} = http://localhost:3001/api/v1\n\nSeed password for all demo users: Workspace@123\nLogin → Superadmin saves {{accessToken}} automatically.\nLogin → Ayesha saves {{ayeshaToken}} for dept-admin scoping checks.\nNo facial recognition / client self-signup yet.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -11,7 +11,8 @@
     { "key": "hamzaToken", "value": "" },
     { "key": "clientToken", "value": "" },
     { "key": "ayeshaToken", "value": "" },
-    { "key": "caseId", "value": "1" }
+    { "key": "caseId", "value": "1" },
+    { "key": "clientLinkId", "value": "5" }
   ],
   "auth": {
     "type": "bearer",
@@ -666,6 +667,128 @@
             "header": [],
             "url": "{{baseUrl}}/cases/1",
             "description": "Seed FIN case; CCS admin should get 403. Run Organization → Login Ayesha first if needed."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Clients",
+      "item": [
+        {
+          "name": "Login Superadmin (for clients)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', j.accessToken);",
+                  "  pm.environment.set('accessToken', j.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "List clients",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('has data', () => pm.expect(j.data).to.be.an('array'));",
+                  "const approved = (j.data || []).find(c => c.verificationStatus === 'approved');",
+                  "if (approved) pm.collectionVariables.set('clientLinkId', String(approved.id));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clients?page=1"
+          }
+        },
+        {
+          "name": "List verifications (pending)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clients/verifications"
+          }
+        },
+        {
+          "name": "Client 360",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('has sales', () => pm.expect(j.sales).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clients/{{clientLinkId}}"
+          }
+        },
+        {
+          "name": "Verify — invalid CNIC (expect 400)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"under_review\",\n  \"cnic\": \"bad\"\n}"
+            },
+            "url": "{{baseUrl}}/clients/1/verify"
+          }
+        },
+        {
+          "name": "Verify — under_review",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"under_review\",\n  \"reason\": \"Checking docs\",\n  \"cnic\": \"35202-1234567-1\",\n  \"mobile\": \"0300-1234567\"\n}"
+            },
+            "url": "{{baseUrl}}/clients/1/verify",
+            "description": "Mutates client_links.verification_status for link id 1. Restore to pending in DB if needed."
           }
         }
       ]

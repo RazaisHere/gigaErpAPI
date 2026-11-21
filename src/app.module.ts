@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AdminModule } from './admin/admin.module';
 import { AuthModule } from './auth/auth.module';
 import { CasesModule } from './cases/cases.module';
+import { ClientsModule } from './clients/clients.module';
 import configuration from './config/configuration';
 import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
@@ -30,6 +31,7 @@ import { UsersModule } from './users/users.module';
     MembersModule,
     HandoffRulesModule,
     CasesModule,
+    ClientsModule,
   ],
 })
 export class AppModule {}

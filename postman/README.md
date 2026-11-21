@@ -19,8 +19,11 @@ Seed password: `Workspace@123`
 2. Login — Superadmin → Me → Admin ping  
 3. Organization → List departments / members / handoff rules  
 4. Cases → List / create / illegal 422 / handoff  
-5. Login — Ayesha → List members (CCS only) → Case detail seed FIN (403)  
-6. Login — Client → Admin ping (expect 403)  
+5. Clients → List / verifications / 360 / verify  
+6. Login — Ayesha → List members (CCS only) → Case detail seed FIN (403)  
+7. Login — Client → Admin ping (expect 403)  
+
+Facial recognition and client self-signup + SMTP OTP are **not** in these phases yet.  
 
 Avoid **Change password — Hamza** unless you intend to mutate the seed user (or restore the hash afterwards).
 
