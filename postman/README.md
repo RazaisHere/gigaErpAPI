@@ -13,13 +13,13 @@
 
 Seed password: `Workspace@123`
 
-## Suggested Phase 1 smoke order
+## Suggested smoke order
 
-1. Health check  
-2. Health probe  
-3. Login — Superadmin → Me → Admin ping  
-4. Login — Hamza → Me — Hamza (expect 403)  
-5. Login — Client → Admin ping — Client (expect 403)  
+1. Health check / probe  
+2. Login — Superadmin → Me → Admin ping  
+3. Organization → List departments / members / handoff rules  
+4. Login — Ayesha → List members (CCS only) → Add member (expect 403)  
+5. Login — Client → Admin ping (expect 403)  
 
 Avoid **Change password — Hamza** unless you intend to mutate the seed user (or restore the hash afterwards).
 

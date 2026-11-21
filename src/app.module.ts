@@ -5,7 +5,11 @@ import { AuthModule } from './auth/auth.module';
 import configuration from './config/configuration';
 import { envValidationSchema } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
+import { DepartmentAdminsModule } from './department-admins/department-admins.module';
+import { DepartmentsModule } from './departments/departments.module';
+import { HandoffRulesModule } from './handoff-rules/handoff-rules.module';
 import { HealthModule } from './health/health.module';
+import { MembersModule } from './members/members.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -20,6 +24,10 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     HealthModule,
     AdminModule,
+    DepartmentsModule,
+    DepartmentAdminsModule,
+    MembersModule,
+    HandoffRulesModule,
   ],
 })
 export class AppModule {}

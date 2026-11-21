@@ -2,14 +2,15 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Giga Workspace API",
-    "description": "Client Services Workspace API (NestJS).\n\nPhases covered: 0 (health) + 1 (auth/roles).\nBase path: {{baseUrl}} = http://localhost:3001/api/v1\n\nSeed password for all demo users: Workspace@123\nLogin → Superadmin saves {{accessToken}} automatically.",
+    "description": "Client Services Workspace API (NestJS).\n\nPhases covered: 0 (health) + 1 (auth/roles) + 2 (departments/members/handoff).\nBase path: {{baseUrl}} = http://localhost:3001/api/v1\n\nSeed password for all demo users: Workspace@123\nLogin → Superadmin saves {{accessToken}} automatically.\nLogin → Ayesha saves {{ayeshaToken}} for dept-admin scoping checks.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:3001/api/v1" },
     { "key": "accessToken", "value": "" },
     { "key": "hamzaToken", "value": "" },
-    { "key": "clientToken", "value": "" }
+    { "key": "clientToken", "value": "" },
+    { "key": "ayeshaToken", "value": "" }
   ],
   "auth": {
     "type": "bearer",
@@ -314,6 +315,187 @@
             "header": [],
             "url": "{{baseUrl}}/admin/ping",
             "description": "Run Login — Client first. RolesGuard rejects client."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organization",
+      "item": [
+        {
+          "name": "Login Superadmin (for org tests)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "if (j.accessToken) {",
+                  "  pm.collectionVariables.set('accessToken', j.accessToken);",
+                  "  pm.environment.set('accessToken', j.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{superadminEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Login — Ayesha (CCS admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test('CCS', () => pm.expect(j.user.department.code).to.eql('CCS'));",
+                  "if (j.accessToken) {",
+                  "  pm.collectionVariables.set('ayeshaToken', j.accessToken);",
+                  "  pm.environment.set('ayeshaToken', j.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{ayeshaEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "List departments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('has departments', () => pm.expect(pm.response.json().length).to.be.at.least(5));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/departments"
+          }
+        },
+        {
+          "name": "List department admins",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/department-admins"
+          }
+        },
+        {
+          "name": "List staff",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/staff"
+          }
+        },
+        {
+          "name": "List members (superadmin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/members"
+          }
+        },
+        {
+          "name": "List members — Ayesha own dept",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const rows = pm.response.json();",
+                  "pm.test('only CCS', () => rows.forEach(r => pm.expect(r.department.code).to.eql('CCS')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ayeshaToken}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/members"
+          }
+        },
+        {
+          "name": "Add member — Ayesha (expect 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{ayeshaToken}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Should Fail\",\n  \"email\": \"should.fail@gigagroup.pk\",\n  \"departmentId\": \"2\"\n}"
+            },
+            "url": "{{baseUrl}}/members"
+          }
+        },
+        {
+          "name": "List handoff rules",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/handoff-rules"
+          }
+        },
+        {
+          "name": "Patch department (deactivate example)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\"\n}"
+            },
+            "url": "{{baseUrl}}/departments/1",
+            "description": "Superadmin only. Keeps FIN active (safe smoke)."
           }
         }
       ]

@@ -27,3 +27,11 @@ values:
     value: client.1@workspace.local
     enabled: true
     type: default
+  - key: ayeshaEmail
+    value: ayesha.khan@gigagroup.pk
+    enabled: true
+    type: default
+  - key: ayeshaToken
+    value: ''
+    enabled: true
+    type: secret

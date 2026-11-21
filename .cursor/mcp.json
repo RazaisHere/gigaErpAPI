@@ -3,6 +3,16 @@
     "sql": {
       "command": "D:\\Projects\\MCPS\\mysql\\mysql-mcp\\venv\\Scripts\\python.exe",
       "args": ["D:\\Projects\\MCPS\\mysql\\mysql-mcp\\sql.py"]
+    },
+    "git": {
+      "command": "D:\\Projects\\MCPS\\gitMCP\\git-mcp-go\\git-mcp-go.exe",
+      "args": [
+        "serve",
+        "-r",
+        "D:\\Projects\\MCPS\\gitMCP",
+        "--mode",
+        "shell"
+      ]
     }
   }
 }

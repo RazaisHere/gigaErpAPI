@@ -1,0 +1,26 @@
+$kind: http-request
+name: 'Add member — Ayesha (expect 403)'
+order: 3000
+method: POST
+url: '{{baseUrl}}/members'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{ayeshaToken}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Should Fail",
+      "email": "should.fail@gigagroup.pk",
+      "departmentId": "2"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 403', () => pm.response.to.have.status(403));
