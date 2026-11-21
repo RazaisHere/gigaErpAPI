@@ -18,7 +18,11 @@ import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { SkipMustChangePassword } from './decorators/skip-must-change-password.decorator';
+import { ClientSignupService } from './client-signup.service';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ClientConfirmDto } from './dto/client-confirm.dto';
+import { ClientRegisterDto } from './dto/client-register.dto';
+import { ClientResendCodeDto } from './dto/client-resend-code.dto';
 import { CompleteNewPasswordDto } from './dto/complete-new-password.dto';
 import { ConfirmForgotPasswordDto } from './dto/confirm-forgot-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -29,7 +33,10 @@ import { RequestUser } from './types/jwt-payload';
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly clientSignup: ClientSignupService,
+  ) {}
 
   @Public()
   @Post('login')
@@ -41,6 +48,36 @@ export class AuthController {
   @ApiOkResponse({ description: 'Access token (and optional Cognito challenge)' })
   login(@Body() body: LoginDto) {
     return this.auth.login(body.email, body.password);
+  }
+
+  @Public()
+  @Post('client/register')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Client self-signup: match ERP by CNIC/phone, Cognito SignUp, email verification code',
+  })
+  registerClient(@Body() body: ClientRegisterDto) {
+    return this.clientSignup.register(body);
+  }
+
+  @Public()
+  @Post('client/confirm')
+  @HttpCode(200)
+  @ApiOperation({
+    summary:
+      'Confirm Cognito signup code → create workspace client user + pending client_link',
+  })
+  confirmClient(@Body() body: ClientConfirmDto) {
+    return this.clientSignup.confirm(body);
+  }
+
+  @Public()
+  @Post('client/resend-code')
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Resend Cognito email verification code' })
+  resendClientCode(@Body() body: ClientResendCodeDto) {
+    return this.clientSignup.resendCode(body.email);
   }
 
   @Public()

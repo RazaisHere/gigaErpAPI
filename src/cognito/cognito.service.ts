@@ -11,9 +11,12 @@ import {
   ChangePasswordCommand,
   CognitoIdentityProviderClient,
   ConfirmForgotPasswordCommand,
+  ConfirmSignUpCommand,
   ForgotPasswordCommand,
   GlobalSignOutCommand,
   MessageActionType,
+  ResendConfirmationCodeCommand,
+  SignUpCommand,
   UsernameExistsException,
 } from '@aws-sdk/client-cognito-identity-provider';
 import {
@@ -368,6 +371,136 @@ export class CognitoService {
     await this.client.send(
       new GlobalSignOutCommand({ AccessToken: accessToken }),
     );
+  }
+
+  /**
+   * Self-service SignUp. Cognito emails the verification code when the pool
+   * is configured for email verification (no custom SMTP needed).
+   */
+  async signUp(params: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string | null;
+  }): Promise<{ userSub?: string; userConfirmed: boolean }> {
+    this.assertConfigured();
+    const username = params.email.toLowerCase();
+    const baseAttrs = [
+      { Name: 'email', Value: username },
+      { Name: 'name', Value: params.name },
+    ];
+
+    const attempt = async (withPhone: boolean) => {
+      const attrs =
+        withPhone && params.phone
+          ? [
+              ...baseAttrs,
+              { Name: 'phone_number', Value: this.toE164(params.phone) },
+            ]
+          : baseAttrs;
+      return this.client.send(
+        new SignUpCommand({
+          ClientId: this.clientId,
+          Username: username,
+          Password: params.password,
+          SecretHash: this.secretHash(username),
+          UserAttributes: attrs,
+        }),
+      );
+    };
+
+    try {
+      const result = await attempt(Boolean(params.phone));
+      return {
+        userSub: result.UserSub,
+        userConfirmed: Boolean(result.UserConfirmed),
+      };
+    } catch (err) {
+      if (err instanceof UsernameExistsException) {
+        throw new BadRequestException(
+          'An account with this email already exists. If you have not confirmed it, request a new code.',
+        );
+      }
+      if (params.phone) {
+        this.logger.warn(
+          `Cognito SignUp with phone failed for ${username}; retrying without phone`,
+        );
+        try {
+          const result = await attempt(false);
+          return {
+            userSub: result.UserSub,
+            userConfirmed: Boolean(result.UserConfirmed),
+          };
+        } catch (retryErr) {
+          if (retryErr instanceof UsernameExistsException) {
+            throw new BadRequestException(
+              'An account with this email already exists. If you have not confirmed it, request a new code.',
+            );
+          }
+          throw retryErr;
+        }
+      }
+      throw err;
+    }
+  }
+
+  async confirmSignUp(email: string, code: string): Promise<void> {
+    this.assertConfigured();
+    const username = email.toLowerCase();
+    await this.client.send(
+      new ConfirmSignUpCommand({
+        ClientId: this.clientId,
+        Username: username,
+        ConfirmationCode: code,
+        SecretHash: this.secretHash(username),
+      }),
+    );
+  }
+
+  async resendConfirmationCode(email: string): Promise<void> {
+    this.assertConfigured();
+    const username = email.toLowerCase();
+    await this.client.send(
+      new ResendConfirmationCodeCommand({
+        ClientId: this.clientId,
+        Username: username,
+        SecretHash: this.secretHash(username),
+      }),
+    );
+  }
+
+  async getUserSub(email: string): Promise<string> {
+    this.assertConfigured();
+    const existing = await this.client.send(
+      new AdminGetUserCommand({
+        UserPoolId: this.userPoolId,
+        Username: email.toLowerCase(),
+      }),
+    );
+    const sub = existing.UserAttributes?.find((a) => a.Name === 'sub')?.Value;
+    if (!sub) {
+      throw new BadRequestException(
+        `Could not resolve Cognito sub for ${email}`,
+      );
+    }
+    return sub;
+  }
+
+  isConfigured(): boolean {
+    return Boolean(
+      this.userPoolId &&
+        this.clientId &&
+        this.userPoolId !== '...' &&
+        this.clientId !== '...',
+    );
+  }
+
+  private assertConfigured() {
+    if (!this.isConfigured()) {
+      throw new BadRequestException(
+        'Cognito is not configured. Set COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID.',
+      );
+    }
   }
 
   private secretHashParams(username: string): Record<string, string> {

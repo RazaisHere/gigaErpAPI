@@ -29,11 +29,19 @@ Facial recognition and client self-signup + SMTP OTP are **not** in these phases
 
 Default `AUTH_PROVIDER=nest` keeps local JWTs. To cut over:
 
-1. Create a Cognito user pool + app client with `ALLOW_ADMIN_USER_PASSWORD_AUTH` (and email as username/alias).
-2. Fill `COGNITO_*` + AWS credentials in `.env`.
+1. Create a Cognito user pool + app client with `ALLOW_ADMIN_USER_PASSWORD_AUTH` (and email as username/alias). Enable **self-registration** + email verification for client signup.
+2. Fill `COGNITO_*` + AWS credentials in `.env` (do not leave placeholder `...`).
 3. Run `npm run cognito:sync` (provisions seed users with permanent `Workspace@123`, writes `cognito_sub`).
 4. Set `AUTH_PROVIDER=cognito`, restart the API.
 5. Login responses return Cognito `accessToken` / `refreshToken` (use the Cognito Auth folder requests for refresh / forgot / complete-new-password).
+
+### Client self-signup
+
+1. `POST /auth/client/register` with email, password, CNIC, phone (matches `src_clients`).
+2. Enter the Cognito email code into `signupCode`, then `POST /auth/client/confirm`.
+3. Staff approve via **Clients → Verifications** / `POST /clients/:id/verify`.
+
+Demo ERP match (not already linked): CNIC `21104-4733982-1`, phone `0341-5813388` (client id 6).
 
 Avoid **Change password — Hamza** unless you intend to mutate the seed user (or restore the hash afterwards).
 

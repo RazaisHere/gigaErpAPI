@@ -3,10 +3,17 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { CognitoModule } from '../cognito/cognito.module';
+import { ClientLink } from '../clients/entities/client-link.entity';
+import { Role } from '../users/entities/role.entity';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/entities/user-role.entity';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { ClientSignupService } from './client-signup.service';
+import { PendingClientSignup } from './entities/pending-client-signup.entity';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { MustChangePasswordGuard } from './guards/must-change-password.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -19,6 +26,10 @@ const authProvider = process.env.AUTH_PROVIDER ?? 'nest';
   imports: [
     UsersModule,
     CognitoModule,
+    TypeOrmModule.forFeature(
+      [PendingClientSignup, User, Role, UserRole, ClientLink],
+      'workspace',
+    ),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -35,6 +46,7 @@ const authProvider = process.env.AUTH_PROVIDER ?? 'nest';
   controllers: [AuthController],
   providers: [
     AuthService,
+    ClientSignupService,
     ...(authProvider === 'cognito'
       ? [CognitoJwtStrategy]
       : [JwtStrategy]),

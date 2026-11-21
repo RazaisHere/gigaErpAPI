@@ -178,6 +178,22 @@ CREATE TABLE client_links (
   CONSTRAINT client_links_user_fk FOREIGN KEY (user_id) REFERENCES users (id)
 ) ENGINE=InnoDB;
 
+-- Cognito SignUp intent until email confirmation creates the workspace user + client_link.
+CREATE TABLE pending_client_signups (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  email VARCHAR(255) NOT NULL,
+  phone VARCHAR(30) NOT NULL,
+  cnic VARCHAR(20) NOT NULL,
+  source_client_id INT UNSIGNED NOT NULL,
+  client_name VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY pending_client_signups_email_unique (email),
+  KEY pending_client_signups_source (source_client_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE case_categories (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   name VARCHAR(120) NOT NULL,

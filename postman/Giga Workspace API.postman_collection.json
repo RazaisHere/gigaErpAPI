@@ -210,6 +210,60 @@
           }
         },
         {
+          "name": "Client register (Cognito + ERP match)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200 or expected error', () => {",
+                  "  pm.expect([200, 404, 409, 400]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{signupEmail}}\",\n  \"password\": \"{{password}}\",\n  \"cnic\": \"{{signupCnic}}\",\n  \"phone\": \"{{signupPhone}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/client/register",
+            "description": "Matches src_clients by CNIC/phone (seed tip: client 6 CNIC 21104-4733982-1). Requires real Cognito pool. Creates pending_client_signups and sends Cognito email code."
+          }
+        },
+        {
+          "name": "Client confirm (Cognito code)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{signupEmail}}\",\n  \"code\": \"{{signupCode}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/client/confirm",
+            "description": "After confirm: workspace user (role=client) + client_links verification_status=pending for staff queue."
+          }
+        },
+        {
+          "name": "Client resend code",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{signupEmail}}\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/client/resend-code"
+          }
+        },
+        {
           "name": "Login — Hamza (must change password)",
           "event": [
             {
