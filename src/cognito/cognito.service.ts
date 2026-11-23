@@ -3,8 +3,6 @@ import {
   AdminDisableUserCommand,
   AdminEnableUserCommand,
   AdminGetUserCommand,
-  AdminInitiateAuthCommand,
-  AdminRespondToAuthChallengeCommand,
   AdminSetUserPasswordCommand,
   AuthFlowType,
   ChallengeNameType,
@@ -14,8 +12,10 @@ import {
   ConfirmSignUpCommand,
   ForgotPasswordCommand,
   GlobalSignOutCommand,
+  InitiateAuthCommand,
   MessageActionType,
   ResendConfirmationCodeCommand,
+  RespondToAuthChallengeCommand,
   SignUpCommand,
   UsernameExistsException,
 } from '@aws-sdk/client-cognito-identity-provider';
@@ -209,13 +209,17 @@ export class CognitoService {
     );
   }
 
+  /**
+   * Client auth flow (InitiateAuth) — does not need cognito-idp:Admin* IAM.
+   * App client must allow USER_PASSWORD_AUTH (+ REFRESH_TOKEN_AUTH).
+   */
   async authenticate(email: string, password: string): Promise<CognitoAuthResult> {
+    this.assertConfigured();
     const username = email.toLowerCase();
     const result = await this.client.send(
-      new AdminInitiateAuthCommand({
-        UserPoolId: this.userPoolId,
+      new InitiateAuthCommand({
         ClientId: this.clientId,
-        AuthFlow: AuthFlowType.ADMIN_USER_PASSWORD_AUTH,
+        AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
         AuthParameters: {
           USERNAME: username,
           PASSWORD: password,
@@ -224,30 +228,7 @@ export class CognitoService {
       }),
     );
 
-    if (result.ChallengeName && result.Session) {
-      return {
-        kind: 'challenge',
-        challengeName: result.ChallengeName,
-        session: result.Session,
-        challengeParameters: result.ChallengeParameters,
-      };
-    }
-
-    const auth = result.AuthenticationResult;
-    if (!auth?.AccessToken) {
-      throw new UnauthorizedException('Cognito authentication failed');
-    }
-
-    return {
-      kind: 'tokens',
-      tokens: {
-        accessToken: auth.AccessToken,
-        idToken: auth.IdToken,
-        refreshToken: auth.RefreshToken,
-        tokenType: auth.TokenType ?? 'Bearer',
-        expiresIn: auth.ExpiresIn ?? 3600,
-      },
-    };
+    return this.toAuthResult(result, 'Cognito authentication failed');
   }
 
   async completeNewPassword(params: {
@@ -255,10 +236,10 @@ export class CognitoService {
     newPassword: string;
     session: string;
   }): Promise<CognitoAuthResult> {
+    this.assertConfigured();
     const username = params.email.toLowerCase();
     const result = await this.client.send(
-      new AdminRespondToAuthChallengeCommand({
-        UserPoolId: this.userPoolId,
+      new RespondToAuthChallengeCommand({
         ClientId: this.clientId,
         ChallengeName: ChallengeNameType.NEW_PASSWORD_REQUIRED,
         Session: params.session,
@@ -270,37 +251,14 @@ export class CognitoService {
       }),
     );
 
-    if (result.ChallengeName && result.Session) {
-      return {
-        kind: 'challenge',
-        challengeName: result.ChallengeName,
-        session: result.Session,
-        challengeParameters: result.ChallengeParameters,
-      };
-    }
-
-    const auth = result.AuthenticationResult;
-    if (!auth?.AccessToken) {
-      throw new UnauthorizedException('Failed to complete password challenge');
-    }
-
-    return {
-      kind: 'tokens',
-      tokens: {
-        accessToken: auth.AccessToken,
-        idToken: auth.IdToken,
-        refreshToken: auth.RefreshToken,
-        tokenType: auth.TokenType ?? 'Bearer',
-        expiresIn: auth.ExpiresIn ?? 3600,
-      },
-    };
+    return this.toAuthResult(result, 'Failed to complete password challenge');
   }
 
   async refresh(email: string, refreshToken: string): Promise<CognitoTokens> {
+    this.assertConfigured();
     const username = email.toLowerCase();
     const result = await this.client.send(
-      new AdminInitiateAuthCommand({
-        UserPoolId: this.userPoolId,
+      new InitiateAuthCommand({
         ClientId: this.clientId,
         AuthFlow: AuthFlowType.REFRESH_TOKEN_AUTH,
         AuthParameters: {
@@ -322,6 +280,47 @@ export class CognitoService {
       refreshToken: auth.RefreshToken ?? refreshToken,
       tokenType: auth.TokenType ?? 'Bearer',
       expiresIn: auth.ExpiresIn ?? 3600,
+    };
+  }
+
+  private toAuthResult(
+    result: {
+      ChallengeName?: string;
+      Session?: string;
+      ChallengeParameters?: Record<string, string>;
+      AuthenticationResult?: {
+        AccessToken?: string;
+        IdToken?: string;
+        RefreshToken?: string;
+        TokenType?: string;
+        ExpiresIn?: number;
+      };
+    },
+    failMessage: string,
+  ): CognitoAuthResult {
+    if (result.ChallengeName && result.Session) {
+      return {
+        kind: 'challenge',
+        challengeName: result.ChallengeName,
+        session: result.Session,
+        challengeParameters: result.ChallengeParameters,
+      };
+    }
+
+    const auth = result.AuthenticationResult;
+    if (!auth?.AccessToken) {
+      throw new UnauthorizedException(failMessage);
+    }
+
+    return {
+      kind: 'tokens',
+      tokens: {
+        accessToken: auth.AccessToken,
+        idToken: auth.IdToken,
+        refreshToken: auth.RefreshToken,
+        tokenType: auth.TokenType ?? 'Bearer',
+        expiresIn: auth.ExpiresIn ?? 3600,
+      },
     };
   }
 

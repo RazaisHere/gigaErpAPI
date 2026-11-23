@@ -1,5 +1,7 @@
 # Postman — Giga Workspace API
 
+Full request/response reference by module: [`docs/API.md`](../docs/API.md). Live OpenAPI: `http://localhost:3001/docs`.
+
 ## Quick import (Postman Desktop)
 
 1. Open Postman → **Import**

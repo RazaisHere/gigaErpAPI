@@ -41,11 +41,16 @@ export class AuthService {
     this.requireCognito();
     const user = await this.requireActiveWorkspaceUser(email);
 
-    const result = await this.cognito.completeNewPassword({
-      email,
-      newPassword,
-      session,
-    });
+    let result;
+    try {
+      result = await this.cognito.completeNewPassword({
+        email,
+        newPassword,
+        session,
+      });
+    } catch (err) {
+      this.rethrowCognitoAuthError(err);
+    }
 
     if (result.kind === 'challenge') {
       return {
@@ -227,10 +232,51 @@ export class AuthService {
         user: this.toPublicUser(this.users.toAuthProfile(user)),
       };
     } catch (err) {
-      throw new UnauthorizedException(
-        err instanceof Error ? 'Invalid email or password' : 'Invalid email or password',
+      this.rethrowCognitoAuthError(err);
+    }
+  }
+
+  private rethrowCognitoAuthError(err: unknown): never {
+    const name =
+      err && typeof err === 'object' && 'name' in err
+        ? String((err as { name: string }).name)
+        : '';
+    const message =
+      err instanceof Error ? err.message : 'Invalid email or password';
+
+    if (
+      name === 'AccessDeniedException' ||
+      message.includes('not authorized to perform')
+    ) {
+      throw new BadRequestException(
+        'Cognito IAM permissions are incomplete. Attach AdminInitiateAuth / AdminRespondToAuthChallenge (see docs/cognito-iam-policy.json), or use USER_PASSWORD_AUTH with COGNITO_CLIENT_SECRET.',
       );
     }
+    if (
+      message.includes('SECRET_HASH') ||
+      message.includes('secret but SECRET_HASH')
+    ) {
+      throw new BadRequestException(
+        'Cognito app client has a client secret. Add COGNITO_CLIENT_SECRET to .env (App client → Show client secret in AWS Console).',
+      );
+    }
+    if (message.includes('USER_PASSWORD_AUTH')) {
+      throw new BadRequestException(
+        'Enable ALLOW_USER_PASSWORD_AUTH on the Cognito app client (App client → Authentication flows).',
+      );
+    }
+    if (
+      name === 'NotAuthorizedException' ||
+      name === 'UserNotFoundException' ||
+      name === 'UserNotConfirmedException'
+    ) {
+      throw new UnauthorizedException(
+        name === 'UserNotConfirmedException'
+          ? 'Email is not confirmed yet'
+          : 'Invalid email or password',
+      );
+    }
+    throw new UnauthorizedException('Invalid email or password');
   }
 
   private async requireActiveWorkspaceUser(email: string) {
