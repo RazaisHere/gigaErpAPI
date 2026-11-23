@@ -17,7 +17,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "cognito:sync": "node --env-file=.env scripts/sync-cognito-users.mjs"
+    "cognito:sync": "node --env-file=.env scripts/sync-cognito-users.mjs",
+    "db:migrate:supabase": "node --env-file=.env scripts/migrate-mysql-to-supabase.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-cognito-identity-provider": "^3.1175.0",
@@ -32,11 +33,13 @@
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
+    "dotenv": "^18.0.10",
     "joi": "^17.13.3",
     "jwks-rsa": "^4.1.0",
     "mysql2": "^3.14.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pg": "^8.23.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "typeorm": "^0.3.22"
@@ -50,6 +53,7 @@
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^6.0.2",
     "jest": "^29.7.0",
     "prettier": "^3.4.2",

@@ -24,12 +24,12 @@ export class HandoffRule {
   @JoinColumn({ name: 'to_department_id' })
   toDepartment!: Department;
 
-  @Column({ name: 'is_allowed', type: 'tinyint', width: 1, default: 1 })
+  @Column({ name: 'is_allowed', type: 'boolean', default: true })
   isAllowed!: boolean;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 }

@@ -65,10 +65,10 @@ export class CaseEntity {
   @Column({ name: 'sla_band', type: 'varchar', length: 20, default: 'On track' })
   slaBand!: string;
 
-  @Column({ name: 'opened_at', type: 'timestamp', nullable: true })
+  @Column({ name: 'opened_at', type: 'timestamptz', nullable: true })
   openedAt!: Date;
 
-  @Column({ name: 'closed_at', type: 'timestamp', nullable: true })
+  @Column({ name: 'closed_at', type: 'timestamptz', nullable: true })
   closedAt!: Date | null;
 
   @ManyToOne(() => User, { nullable: true })
@@ -81,9 +81,9 @@ export class CaseEntity {
   @OneToMany(() => CaseHandoff, (h) => h.case)
   handoffs!: CaseHandoff[];
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 }

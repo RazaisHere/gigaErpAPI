@@ -43,9 +43,8 @@ export class User {
 
   @Column({
     name: 'must_change_password',
-    type: 'tinyint',
-    width: 1,
-    default: 0,
+    type: 'boolean',
+    default: false,
   })
   mustChangePassword!: boolean;
 
@@ -58,9 +57,9 @@ export class User {
   @OneToMany(() => DepartmentUser, (du) => du.user)
   departmentUsers!: DepartmentUser[];
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
-  @UpdateDateColumn({ name: 'updated_at', type: 'timestamp' })
+  @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
   updatedAt!: Date;
 }

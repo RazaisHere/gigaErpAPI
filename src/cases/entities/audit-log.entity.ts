@@ -44,6 +44,6 @@ export class AuditLog {
   @Column({ type: 'varchar', length: 45, nullable: true })
   ip!: string | null;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 }

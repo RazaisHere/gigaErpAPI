@@ -25,9 +25,9 @@ export class CaseNote {
   @Column({ type: 'text' })
   body!: string;
 
-  @Column({ name: 'client_visible', type: 'tinyint', width: 1, default: 0 })
+  @Column({ name: 'client_visible', type: 'boolean', default: false })
   clientVisible!: boolean;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 }

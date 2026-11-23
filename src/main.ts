@@ -1,3 +1,8 @@
+import { config as loadEnv } from 'dotenv';
+
+// Load .env before AuthModule picks AUTH_PROVIDER for the JWT strategy
+loadEnv();
+
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
@@ -26,7 +31,7 @@ async function bootstrap() {
   const swagger = new DocumentBuilder()
     .setTitle('Giga Workspace API')
     .setDescription(
-      'Client Services Workspace — writes to giga_workspace; reads ERP via src_* views.',
+      'Client Services Workspace — Postgres (Supabase) workspace DB; MySQL ERP via src_* views.',
     )
     .setVersion('0.1.0')
     .addBearerAuth()

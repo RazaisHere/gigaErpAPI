@@ -28,9 +28,9 @@ export class DepartmentUser {
   @JoinColumn({ name: 'department_id' })
   department!: Department;
 
-  @Column({ name: 'is_admin', type: 'tinyint', width: 1, default: 0 })
+  @Column({ name: 'is_admin', type: 'boolean', default: false })
   isAdmin!: boolean;
 
-  @CreateDateColumn({ name: 'created_at', type: 'timestamp' })
+  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 }
