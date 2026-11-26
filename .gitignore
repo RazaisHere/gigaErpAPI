@@ -42,3 +42,7 @@ lerna-debug.log*
 *.pem
 .agents
 .claude
+
+# Postman plugin local cache / skills (not app contract)
+.postman/
+postman/skills/
