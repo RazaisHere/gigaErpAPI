@@ -1,0 +1,27 @@
+$kind: http-request
+name: Login Superadmin (for properties)
+order: 1000
+method: POST
+url: '{{baseUrl}}/auth/login'
+auth:
+  type: noauth
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{superadminEmail}}",
+      "password": "{{password}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      if (j.accessToken) {
+        pm.collectionVariables.set('accessToken', j.accessToken);
+        pm.environment.set('accessToken', j.accessToken);
+      }

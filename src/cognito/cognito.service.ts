@@ -17,16 +17,21 @@ import {
   ResendConfirmationCodeCommand,
   RespondToAuthChallengeCommand,
   SignUpCommand,
-  UsernameExistsException,
 } from '@aws-sdk/client-cognito-identity-provider';
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHmac } from 'crypto';
+import {
+  cognitoErrorName,
+  isPhoneAttributeError,
+  mapCognitoError,
+} from './cognito-errors';
 
 export type CognitoTokens = {
   accessToken: string;
@@ -111,9 +116,9 @@ export class CognitoService {
       );
       sub = created.User?.Attributes?.find((a) => a.Name === 'sub')?.Value;
     } catch (err) {
-      if (err instanceof UsernameExistsException) {
+      if (cognitoErrorName(err) === 'UsernameExistsException') {
         this.logger.debug(`Cognito user already exists: ${username}`);
-      } else if (params.phone) {
+      } else if (params.phone && isPhoneAttributeError(err)) {
         // Retry without phone if E.164 / pool phone config rejects it
         this.logger.warn(
           `Cognito create with phone failed for ${username}; retrying without phone`,
@@ -130,23 +135,27 @@ export class CognitoService {
           );
           sub = created.User?.Attributes?.find((a) => a.Name === 'sub')?.Value;
         } catch (retryErr) {
-          if (!(retryErr instanceof UsernameExistsException)) {
-            throw retryErr;
+          if (cognitoErrorName(retryErr) !== 'UsernameExistsException') {
+            mapCognitoError(retryErr);
           }
         }
       } else {
-        throw err;
+        mapCognitoError(err);
       }
     }
 
     if (!sub) {
-      const existing = await this.client.send(
-        new AdminGetUserCommand({
-          UserPoolId: this.userPoolId,
-          Username: username,
-        }),
-      );
-      sub = existing.UserAttributes?.find((a) => a.Name === 'sub')?.Value;
+      try {
+        const existing = await this.client.send(
+          new AdminGetUserCommand({
+            UserPoolId: this.userPoolId,
+            Username: username,
+          }),
+        );
+        sub = existing.UserAttributes?.find((a) => a.Name === 'sub')?.Value;
+      } catch (err) {
+        mapCognitoError(err);
+      }
     }
 
     if (!sub) {
@@ -156,57 +165,77 @@ export class CognitoService {
     }
 
     if (params.permanent !== false) {
-      await this.client.send(
-        new AdminSetUserPasswordCommand({
-          UserPoolId: this.userPoolId,
-          Username: username,
-          Password: params.temporaryPassword,
-          Permanent: true,
-        }),
-      );
+      try {
+        await this.client.send(
+          new AdminSetUserPasswordCommand({
+            UserPoolId: this.userPoolId,
+            Username: username,
+            Password: params.temporaryPassword,
+            Permanent: true,
+          }),
+        );
+      } catch (err) {
+        mapCognitoError(err);
+      }
     }
 
     return sub;
   }
 
   async setPermanentPassword(email: string, password: string): Promise<void> {
-    await this.client.send(
-      new AdminSetUserPasswordCommand({
-        UserPoolId: this.userPoolId,
-        Username: email.toLowerCase(),
-        Password: password,
-        Permanent: true,
-      }),
-    );
+    try {
+      await this.client.send(
+        new AdminSetUserPasswordCommand({
+          UserPoolId: this.userPoolId,
+          Username: email.toLowerCase(),
+          Password: password,
+          Permanent: true,
+        }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   async setTemporaryPassword(email: string, password: string): Promise<void> {
-    await this.client.send(
-      new AdminSetUserPasswordCommand({
-        UserPoolId: this.userPoolId,
-        Username: email.toLowerCase(),
-        Password: password,
-        Permanent: false,
-      }),
-    );
+    try {
+      await this.client.send(
+        new AdminSetUserPasswordCommand({
+          UserPoolId: this.userPoolId,
+          Username: email.toLowerCase(),
+          Password: password,
+          Permanent: false,
+        }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   async disableUser(email: string): Promise<void> {
-    await this.client.send(
-      new AdminDisableUserCommand({
-        UserPoolId: this.userPoolId,
-        Username: email.toLowerCase(),
-      }),
-    );
+    try {
+      await this.client.send(
+        new AdminDisableUserCommand({
+          UserPoolId: this.userPoolId,
+          Username: email.toLowerCase(),
+        }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   async enableUser(email: string): Promise<void> {
-    await this.client.send(
-      new AdminEnableUserCommand({
-        UserPoolId: this.userPoolId,
-        Username: email.toLowerCase(),
-      }),
-    );
+    try {
+      await this.client.send(
+        new AdminEnableUserCommand({
+          UserPoolId: this.userPoolId,
+          Username: email.toLowerCase(),
+        }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   /**
@@ -216,19 +245,22 @@ export class CognitoService {
   async authenticate(email: string, password: string): Promise<CognitoAuthResult> {
     this.assertConfigured();
     const username = email.toLowerCase();
-    const result = await this.client.send(
-      new InitiateAuthCommand({
-        ClientId: this.clientId,
-        AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
-        AuthParameters: {
-          USERNAME: username,
-          PASSWORD: password,
-          ...this.secretHashParams(username),
-        },
-      }),
-    );
-
-    return this.toAuthResult(result, 'Cognito authentication failed');
+    try {
+      const result = await this.client.send(
+        new InitiateAuthCommand({
+          ClientId: this.clientId,
+          AuthFlow: AuthFlowType.USER_PASSWORD_AUTH,
+          AuthParameters: {
+            USERNAME: username,
+            PASSWORD: password,
+            ...this.secretHashParams(username),
+          },
+        }),
+      );
+      return this.toAuthResult(result, 'Cognito authentication failed');
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   async completeNewPassword(params: {
@@ -238,49 +270,57 @@ export class CognitoService {
   }): Promise<CognitoAuthResult> {
     this.assertConfigured();
     const username = params.email.toLowerCase();
-    const result = await this.client.send(
-      new RespondToAuthChallengeCommand({
-        ClientId: this.clientId,
-        ChallengeName: ChallengeNameType.NEW_PASSWORD_REQUIRED,
-        Session: params.session,
-        ChallengeResponses: {
-          USERNAME: username,
-          NEW_PASSWORD: params.newPassword,
-          ...this.secretHashParams(username),
-        },
-      }),
-    );
-
-    return this.toAuthResult(result, 'Failed to complete password challenge');
+    try {
+      const result = await this.client.send(
+        new RespondToAuthChallengeCommand({
+          ClientId: this.clientId,
+          ChallengeName: ChallengeNameType.NEW_PASSWORD_REQUIRED,
+          Session: params.session,
+          ChallengeResponses: {
+            USERNAME: username,
+            NEW_PASSWORD: params.newPassword,
+            ...this.secretHashParams(username),
+          },
+        }),
+      );
+      return this.toAuthResult(result, 'Failed to complete password challenge');
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   async refresh(email: string, refreshToken: string): Promise<CognitoTokens> {
     this.assertConfigured();
     const username = email.toLowerCase();
-    const result = await this.client.send(
-      new InitiateAuthCommand({
-        ClientId: this.clientId,
-        AuthFlow: AuthFlowType.REFRESH_TOKEN_AUTH,
-        AuthParameters: {
-          REFRESH_TOKEN: refreshToken,
-          USERNAME: username,
-          ...this.secretHashParams(username),
-        },
-      }),
-    );
+    try {
+      const result = await this.client.send(
+        new InitiateAuthCommand({
+          ClientId: this.clientId,
+          AuthFlow: AuthFlowType.REFRESH_TOKEN_AUTH,
+          AuthParameters: {
+            REFRESH_TOKEN: refreshToken,
+            USERNAME: username,
+            ...this.secretHashParams(username),
+          },
+        }),
+      );
 
-    const auth = result.AuthenticationResult;
-    if (!auth?.AccessToken) {
-      throw new UnauthorizedException('Refresh token is invalid or expired');
+      const auth = result.AuthenticationResult;
+      if (!auth?.AccessToken) {
+        throw new UnauthorizedException('Refresh token is invalid or expired');
+      }
+
+      return {
+        accessToken: auth.AccessToken,
+        idToken: auth.IdToken,
+        refreshToken: auth.RefreshToken ?? refreshToken,
+        tokenType: auth.TokenType ?? 'Bearer',
+        expiresIn: auth.ExpiresIn ?? 3600,
+      };
+    } catch (err) {
+      if (err instanceof UnauthorizedException) throw err;
+      mapCognitoError(err);
     }
-
-    return {
-      accessToken: auth.AccessToken,
-      idToken: auth.IdToken,
-      refreshToken: auth.RefreshToken ?? refreshToken,
-      tokenType: auth.TokenType ?? 'Bearer',
-      expiresIn: auth.ExpiresIn ?? 3600,
-    };
   }
 
   private toAuthResult(
@@ -329,24 +369,32 @@ export class CognitoService {
     previousPassword: string,
     proposedPassword: string,
   ): Promise<void> {
-    await this.client.send(
-      new ChangePasswordCommand({
-        AccessToken: accessToken,
-        PreviousPassword: previousPassword,
-        ProposedPassword: proposedPassword,
-      }),
-    );
+    try {
+      await this.client.send(
+        new ChangePasswordCommand({
+          AccessToken: accessToken,
+          PreviousPassword: previousPassword,
+          ProposedPassword: proposedPassword,
+        }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   async forgotPassword(email: string): Promise<void> {
     const username = email.toLowerCase();
-    await this.client.send(
-      new ForgotPasswordCommand({
-        ClientId: this.clientId,
-        Username: username,
-        SecretHash: this.secretHash(username),
-      }),
-    );
+    try {
+      await this.client.send(
+        new ForgotPasswordCommand({
+          ClientId: this.clientId,
+          Username: username,
+          SecretHash: this.secretHash(username),
+        }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   async confirmForgotPassword(params: {
@@ -355,21 +403,29 @@ export class CognitoService {
     newPassword: string;
   }): Promise<void> {
     const username = params.email.toLowerCase();
-    await this.client.send(
-      new ConfirmForgotPasswordCommand({
-        ClientId: this.clientId,
-        Username: username,
-        ConfirmationCode: params.code,
-        Password: params.newPassword,
-        SecretHash: this.secretHash(username),
-      }),
-    );
+    try {
+      await this.client.send(
+        new ConfirmForgotPasswordCommand({
+          ClientId: this.clientId,
+          Username: username,
+          ConfirmationCode: params.code,
+          Password: params.newPassword,
+          SecretHash: this.secretHash(username),
+        }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   async globalSignOut(accessToken: string): Promise<void> {
-    await this.client.send(
-      new GlobalSignOutCommand({ AccessToken: accessToken }),
-    );
+    try {
+      await this.client.send(
+        new GlobalSignOutCommand({ AccessToken: accessToken }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   /**
@@ -415,12 +471,13 @@ export class CognitoService {
         userConfirmed: Boolean(result.UserConfirmed),
       };
     } catch (err) {
-      if (err instanceof UsernameExistsException) {
-        throw new BadRequestException(
+      if (cognitoErrorName(err) === 'UsernameExistsException') {
+        throw new ConflictException(
           'An account with this email already exists. If you have not confirmed it, request a new code.',
         );
       }
-      if (params.phone) {
+      // Only strip phone on attribute/format errors — never on password policy
+      if (params.phone && isPhoneAttributeError(err)) {
         this.logger.warn(
           `Cognito SignUp with phone failed for ${username}; retrying without phone`,
         );
@@ -431,51 +488,64 @@ export class CognitoService {
             userConfirmed: Boolean(result.UserConfirmed),
           };
         } catch (retryErr) {
-          if (retryErr instanceof UsernameExistsException) {
-            throw new BadRequestException(
+          if (cognitoErrorName(retryErr) === 'UsernameExistsException') {
+            throw new ConflictException(
               'An account with this email already exists. If you have not confirmed it, request a new code.',
             );
           }
-          throw retryErr;
+          mapCognitoError(retryErr);
         }
       }
-      throw err;
+      mapCognitoError(err);
     }
   }
 
   async confirmSignUp(email: string, code: string): Promise<void> {
     this.assertConfigured();
     const username = email.toLowerCase();
-    await this.client.send(
-      new ConfirmSignUpCommand({
-        ClientId: this.clientId,
-        Username: username,
-        ConfirmationCode: code,
-        SecretHash: this.secretHash(username),
-      }),
-    );
+    try {
+      await this.client.send(
+        new ConfirmSignUpCommand({
+          ClientId: this.clientId,
+          Username: username,
+          ConfirmationCode: code,
+          SecretHash: this.secretHash(username),
+        }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   async resendConfirmationCode(email: string): Promise<void> {
     this.assertConfigured();
     const username = email.toLowerCase();
-    await this.client.send(
-      new ResendConfirmationCodeCommand({
-        ClientId: this.clientId,
-        Username: username,
-        SecretHash: this.secretHash(username),
-      }),
-    );
+    try {
+      await this.client.send(
+        new ResendConfirmationCodeCommand({
+          ClientId: this.clientId,
+          Username: username,
+          SecretHash: this.secretHash(username),
+        }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
   }
 
   async getUserSub(email: string): Promise<string> {
     this.assertConfigured();
-    const existing = await this.client.send(
-      new AdminGetUserCommand({
-        UserPoolId: this.userPoolId,
-        Username: email.toLowerCase(),
-      }),
-    );
+    let existing;
+    try {
+      existing = await this.client.send(
+        new AdminGetUserCommand({
+          UserPoolId: this.userPoolId,
+          Username: email.toLowerCase(),
+        }),
+      );
+    } catch (err) {
+      mapCognitoError(err);
+    }
     const sub = existing.UserAttributes?.find((a) => a.Name === 'sub')?.Value;
     if (!sub) {
       throw new BadRequestException(

@@ -25,7 +25,9 @@ Seed password: `Workspace@123`
 6. Login — Ayesha → List members (CCS only) → Case detail seed FIN (403)  
 7. Login — Client → Admin ping (expect 403)  
 
-Facial recognition and client self-signup + SMTP OTP are **not** in these phases yet.
+**Shipped:** Phases 0–9 (staff workspace + client self portfolio `/me/*`). Cognito client self-signup is live.
+
+**Next:** Phase 10 client cases, 11 notifications, 12 facial identity, 13 hardening.
 
 ### Cognito (optional)
 
@@ -39,7 +41,12 @@ Default `AUTH_PROVIDER=nest` keeps local JWTs. To cut over:
 
 ### Client self-signup
 
-1. `POST /auth/client/register` with email, password, CNIC, phone (matches `src_clients`).
+1. `POST /auth/client/register` with email, password, CNIC, phone (matches `src_clients`). Password needs uppercase + number + special (min 8).
+2. Confirm with email code → `POST /auth/client/confirm`.
+3. Client can `POST /auth/login` after email confirm.
+4. Staff approve: `GET /clients/verifications` then `POST /clients/:id/verify` `{ "action": "approve" }`.
+
+Legacy note — register step:
 2. Enter the Cognito email code into `signupCode`, then `POST /auth/client/confirm`.
 3. Staff approve via **Clients → Verifications** / `POST /clients/:id/verify`.
 

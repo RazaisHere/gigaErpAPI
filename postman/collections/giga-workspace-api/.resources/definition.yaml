@@ -21,6 +21,12 @@ variables:
     value: hamza.qureshi@gigagroup.pk
   - key: clientEmail
     value: client.1@workspace.local
+  - key: saleId
+    value: '3'
+  - key: projectId
+    value: '1'
+  - key: outstandingSaleId
+    value: ''
 auth:
   type: bearer
   credentials:

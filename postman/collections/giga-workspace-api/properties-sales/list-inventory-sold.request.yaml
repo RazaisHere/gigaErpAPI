@@ -1,0 +1,13 @@
+$kind: http-request
+name: List inventory — Sold
+order: 4200
+method: GET
+url: '{{baseUrl}}/inventory?status=Sold&pageSize=5'
+description: Filter inventory to Sold units only.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('has data', () => pm.expect(j.data).to.be.an('array'));

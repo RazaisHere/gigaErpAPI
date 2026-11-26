@@ -1,0 +1,17 @@
+$kind: http-request
+name: Me unit detail
+order: 1700
+method: GET
+url: '{{baseUrl}}/me/units/{{meUnitsaleId}}'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{approvedClientToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('installments', () => pm.expect(j.installments).to.be.an('array'));

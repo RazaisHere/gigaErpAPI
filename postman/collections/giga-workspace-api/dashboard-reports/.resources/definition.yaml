@@ -1,0 +1,4 @@
+$kind: collection
+name: Dashboard & Reports
+order: 10000
+description: Phase 8 — dashboard overview, case/department/collections reports, audit logs.

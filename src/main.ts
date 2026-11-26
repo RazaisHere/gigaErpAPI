@@ -5,21 +5,24 @@ loadEnv();
 
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { AwsCognitoExceptionFilter } from './common/filters/aws-cognito-exception.filter';
 
 async function bootstrap() {
   process.env.TZ = process.env.TZ ?? 'Asia/Karachi';
 
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
+  const { httpAdapter } = app.get(HttpAdapterHost);
 
   app.setGlobalPrefix('api/v1');
   app.enableCors({
     origin: config.get<string>('corsOrigin'),
     credentials: true,
   });
+  app.useGlobalFilters(new AwsCognitoExceptionFilter(httpAdapter));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

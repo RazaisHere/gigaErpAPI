@@ -65,6 +65,16 @@ const checks = [
   ['GET /cases', () => req('GET', '/cases', { token })],
   ['GET /clients', () => req('GET', '/clients', { token })],
   ['GET /clients/verifications', () => req('GET', '/clients/verifications', { token })],
+  ['GET /sales', () => req('GET', '/sales?pageSize=5', { token })],
+  ['GET /inventory', () => req('GET', '/inventory?pageSize=5', { token })],
+  ['GET /projects', () => req('GET', '/projects', { token })],
+  ['GET /collections/outstanding', () => req('GET', '/collections/outstanding?pageSize=5', { token })],
+  ['GET /collections/upcoming-dues', () => req('GET', '/collections/upcoming-dues?pageSize=5', { token })],
+  ['GET /collections/receipts', () => req('GET', '/collections/receipts?pageSize=5', { token })],
+  ['GET /collections/surcharges', () => req('GET', '/collections/surcharges?pageSize=5', { token })],
+  ['GET /case-categories', () => req('GET', '/case-categories', { token })],
+  ['GET /sla-rules', () => req('GET', '/sla-rules', { token })],
+  ['GET /notification-templates', () => req('GET', '/notification-templates', { token })],
 ];
 
 for (const [name, fn] of checks) {
@@ -84,6 +94,38 @@ const clientId = clients.json?.data?.[0]?.id;
 if (clientId) {
   const detail = await req('GET', `/clients/${clientId}`, { token });
   record(`GET /clients/${clientId}`, detail.status === 200, `status=${detail.status}`);
+}
+
+const sales = await req('GET', '/sales?pageSize=1', { token });
+const saleId = sales.json?.data?.[0]?.id;
+if (saleId) {
+  const detail = await req('GET', `/sales/${saleId}`, { token });
+  record(`GET /sales/${saleId}`, detail.status === 200, `status=${detail.status}`);
+}
+
+const projects = await req('GET', '/projects', { token });
+const projectId = projects.json?.data?.[0]?.id;
+if (projectId) {
+  const detail = await req('GET', `/projects/${projectId}`, { token });
+  record(
+    `GET /projects/${projectId}`,
+    detail.status === 200 && Array.isArray(detail.json?.buildings),
+    `status=${detail.status}`,
+  );
+}
+
+const templates = await req('GET', '/notification-templates', { token });
+const templateId = templates.json?.[0]?.id;
+if (templateId) {
+  const preview = await req('POST', `/notification-templates/${templateId}/preview`, {
+    token,
+    body: { clientName: 'Smoke Client', caseNo: 'CS-SMOKE' },
+  });
+  record(
+    `POST /notification-templates/${templateId}/preview`,
+    preview.status === 200 && String(preview.json?.body || '').includes('Smoke Client'),
+    `status=${preview.status}`,
+  );
 }
 
 const failed = results.filter((r) => !r.ok).length;

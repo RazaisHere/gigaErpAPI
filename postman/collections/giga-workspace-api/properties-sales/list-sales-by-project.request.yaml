@@ -1,0 +1,13 @@
+$kind: http-request
+name: List sales by project
+order: 2100
+method: GET
+url: '{{baseUrl}}/sales?sourceProjectId={{projectId}}&page=1&pageSize=10'
+description: Filter sales by ERP project id.
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('has data', () => pm.expect(j.data).to.be.an('array'));

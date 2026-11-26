@@ -1,0 +1,6 @@
+$kind: collection
+name: Collections
+order: 8000
+description: |-
+  Phase 6 — outstanding, upcoming dues, receipts, surcharges, create recovery case.
+  Access: superadmin or FIN/RCV staff.

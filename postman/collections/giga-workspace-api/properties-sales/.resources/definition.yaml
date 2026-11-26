@@ -1,0 +1,6 @@
+$kind: collection
+name: Properties & Sales
+order: 7000
+description: |-
+  Phase 5 — staff ERP reads (sales, inventory, projects).
+  Run Login Superadmin (for properties) first so {{accessToken}} is set.

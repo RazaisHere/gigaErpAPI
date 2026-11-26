@@ -428,6 +428,8 @@ Access control should live in the **backend**, not a frontend permission matrix 
 
 ## 10. Backend build order (recommended)
 
+### Done (staff workspace)
+
 1. Auth + roles + department scoping  
 2. Cases CRUD + queues + handoff rules enforcement  
 3. Clients + verification  
@@ -436,6 +438,14 @@ Access control should live in the **backend**, not a frontend permission matrix 
 6. Configuration CRUD  
 7. Sales/inventory read APIs (CRM mirror)  
 8. Dashboard metrics + reports + audit log  
+
+### Next (client portal & hardening) — see `docs/API.md` §14
+
+9. **Client self portfolio** — `/me/portfolio`, `/me/dues`, `/me/receipts`, `/me/surcharges` (approved client only)  
+10. Client cases & client-visible notes  
+11. Outbound notifications (template delivery + optional inbox)  
+12. Facial / identity verification (photo match → auto-approve or staff queue)  
+13. Production hardening (Observe, rate limits, e2e, frontend cutover)
 
 ---
 

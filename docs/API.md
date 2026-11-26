@@ -204,6 +204,14 @@ Public. No auth.
 
 Matches `src_clients` by CNIC (phone soft-check). Sends Cognito email verification code.
 
+**Password policy (Nest + Cognito):** at least **8 characters**, **1 uppercase**, **1 number**, **1 special character**. Invalid passwords return **HTTP 400** with that list (not 500).
+
+**Client signup → login flow**
+1. `POST /auth/client/register` — ERP match + Cognito emails a verification code  
+2. `POST /auth/client/confirm` — `{ email, code }` → workspace user + `client_links` (`verificationStatus: pending`)  
+3. `POST /auth/login` — client can sign in after email confirm (pending staff approval is OK for login)  
+4. Staff: `GET /clients/verifications` → `POST /clients/:id/verify` `{ "action": "approve" }` — approves the client link (superadmin / department_admin)
+
 **Request**
 
 ```json
@@ -875,15 +883,145 @@ Same as list, default `verificationStatus=pending`.
 
 ---
 
-## 10. Not implemented yet
+## 10. Sales / inventory / projects (Phase 5)
+
+Staff-only (`superadmin` | `department_admin` | `employee`). Live MySQL `src_*` reads — no ERP writes.
+
+### `GET /sales` — Bearer · staff
+
+**Query:** `q`, `sourceClientId`, `sourceProjectId`, `saleStatusId`, `page`, `pageSize`
+
+```json
+{
+  "data": [
+    {
+      "id": "3",
+      "sourceUnitsaleId": 3,
+      "saleNumber": "BK-1000003",
+      "clientName": "AYSHA ASIM",
+      "projectName": "GOLDCREST",
+      "unitName": "3202",
+      "netPrice": 38260800,
+      "netReceipts": null,
+      "currentOutstanding": 31182552,
+      "saleStatusId": 4
+    }
+  ],
+  "meta": { "page": 1, "pageSize": 20, "total": 5626, "totalPages": 282 }
+}
+```
+
+### `GET /sales/:id` — Sale 360
+
+Owners, unit/project, installments, receipts, surcharges, related workspace cases.
+
+### `GET /inventory` — Bearer · staff
+
+**Query:** `q`, `sourceProjectId`, `sourceBuildingId`, `status` (`Available`|`Sold`), `page`, `pageSize`
+
+### `GET /projects` — Bearer · staff
+
+All projects with building/unit/sold/available counts.
+
+### `GET /projects/:id` — Project + buildings
+
+---
+
+## 11. Collections (Phase 6)
+
+Staff only: **superadmin**, or **department_admin / employee** in **FIN** or **RCV**. Others get **403**.
+
+Live MySQL reads (`src_sale_context`, `src_installments`, `src_receipts`, `src_surcharges`). Recovery case writes to workspace Postgres.
+
+### `GET /collections/outstanding`
+
+**Query:** `q`, `sourceClientId`, `sourceProjectId`, `page`, `pageSize`
+
+Rows with `current_outstanding > 0`. Includes `nextDueDate`, `daysOverdue`, `status` (`Overdue` | `Outstanding`).  
+`id` = `sourceUnitsaleId`.
+
+### `GET /collections/upcoming-dues`
+
+**Query:** same + `withinDays` (default **90**). Installments with `due_date` in `[today, today+withinDays]`. `amount` ≈ `net_price * percentage / 100`.
+
+### `GET /collections/receipts`
+
+Payments from `src_receipts` (+ sale/client context).
+
+### `GET /collections/surcharges`
+
+Late charges from `src_surcharges`.
+
+### `POST /collections/outstanding/:id/recovery-case`
+
+`:id` = ERP `source_unitsale_id` with outstanding balance. Creates a workspace case using category **Outstanding Query** (Recovery), priority High, linked soft ERP ids.
+
+```json
+{ "note": "Optional internal note" }
+```
+
+**Response** — case detail (same shape as `POST /cases`).
+
+---
+
+## 12. Configuration (Phase 7)
+
+Workspace Postgres config. **GET** for staff (`superadmin` | `department_admin` | `employee`). **POST/PATCH** (and template preview) mutate only for **superadmin** (preview also allowed for staff).
+
+### `GET|POST /case-categories` · `GET|PATCH /case-categories/:id`
+
+```json
+{
+  "name": "Billing Dispute",
+  "defaultDepartmentId": "1",
+  "defaultSlaHours": 48
+}
+```
+
+PATCH may set `status`: `active` | `disabled`.
+
+### `GET|POST /sla-rules` · `GET|PATCH /sla-rules/:id`
+
+Priority must be unique: `Low` | `Normal` | `High` | `Urgent`.
+
+```json
+{
+  "name": "Urgent",
+  "priority": "Urgent",
+  "targetHours": 8,
+  "escalateAtPercent": 80
+}
+```
+
+### `GET|POST /notification-templates` · `GET|PATCH /notification-templates/:id`
+
+```json
+{
+  "name": "Case resolved",
+  "templateKey": "case_resolved",
+  "channel": "Email",
+  "subject": "Case {case_no} resolved",
+  "body": "Dear {client_name}, case {case_no} is resolved."
+}
+```
+
+### `POST /notification-templates/:id/preview` — staff
+
+```json
+{ "clientName": "KIFYATULLAH", "caseNo": "CS-1001" }
+```
+
+Returns rendered `subject` / `body` with `{client_name}` and `{case_no}` replaced.
+
+---
+
+## 13. Not implemented yet
 
 | Area | Planned later |
 |------|----------------|
-| Sales / inventory / projects | Phase 5 — `GET /sales`, `/inventory`, `/projects` |
-| Collections | Phase 6 |
-| Config CRUD (categories, SLA, templates) | Phase 7 |
 | Dashboard / reports / audit list API | Phase 8 |
 | Facial recognition | Deferred |
+| Client self portfolio (`/me/sales`, dues) | Separate from staff collections |
 
 ---
 

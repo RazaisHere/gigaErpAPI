@@ -1,0 +1,17 @@
+$kind: http-request
+name: Me summary (home)
+order: 1500
+method: GET
+url: '{{baseUrl}}/me/summary'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{approvedClientToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('totals', () => pm.expect(j.totals).to.have.property('investment'));

@@ -1,11 +1,13 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
+import { tryMapCognitoError } from '../cognito/cognito-errors';
 import { CognitoService } from '../cognito/cognito.service';
 import { AuthUserProfile, UsersService } from '../users/users.service';
 import { JwtPayload } from './types/jwt-payload';
@@ -87,7 +89,11 @@ export class AuthService {
     // Always succeed to avoid email enumeration
     const user = await this.users.findByEmailForAuth(email.trim());
     if (user && ACTIVE_STATUSES.has(user.status)) {
-      await this.cognito.forgotPassword(email);
+      try {
+        await this.cognito.forgotPassword(email);
+      } catch {
+        // Swallow Cognito miss / throttle so response stays generic
+      }
     }
     return {
       ok: true,
@@ -237,45 +243,9 @@ export class AuthService {
   }
 
   private rethrowCognitoAuthError(err: unknown): never {
-    const name =
-      err && typeof err === 'object' && 'name' in err
-        ? String((err as { name: string }).name)
-        : '';
-    const message =
-      err instanceof Error ? err.message : 'Invalid email or password';
-
-    if (
-      name === 'AccessDeniedException' ||
-      message.includes('not authorized to perform')
-    ) {
-      throw new BadRequestException(
-        'Cognito IAM permissions are incomplete. Attach AdminInitiateAuth / AdminRespondToAuthChallenge (see docs/cognito-iam-policy.json), or use USER_PASSWORD_AUTH with COGNITO_CLIENT_SECRET.',
-      );
-    }
-    if (
-      message.includes('SECRET_HASH') ||
-      message.includes('secret but SECRET_HASH')
-    ) {
-      throw new BadRequestException(
-        'Cognito app client has a client secret. Add COGNITO_CLIENT_SECRET to .env (App client → Show client secret in AWS Console).',
-      );
-    }
-    if (message.includes('USER_PASSWORD_AUTH')) {
-      throw new BadRequestException(
-        'Enable ALLOW_USER_PASSWORD_AUTH on the Cognito app client (App client → Authentication flows).',
-      );
-    }
-    if (
-      name === 'NotAuthorizedException' ||
-      name === 'UserNotFoundException' ||
-      name === 'UserNotConfirmedException'
-    ) {
-      throw new UnauthorizedException(
-        name === 'UserNotConfirmedException'
-          ? 'Email is not confirmed yet'
-          : 'Invalid email or password',
-      );
-    }
+    if (err instanceof HttpException) throw err;
+    const mapped = tryMapCognitoError(err);
+    if (mapped) throw mapped;
     throw new UnauthorizedException('Invalid email or password');
   }
 

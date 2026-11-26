@@ -1,0 +1,13 @@
+$kind: http-request
+name: List outstanding
+order: 2000
+method: GET
+url: '{{baseUrl}}/collections/outstanding?page=1&pageSize=10'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('has data', () => pm.expect(j.data).to.be.an('array'));
+      if (j.data && j.data[0]) pm.collectionVariables.set('outstandingSaleId', String(j.data[0].id));

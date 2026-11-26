@@ -1,0 +1,6 @@
+$kind: http-request
+name: List inventory — Available
+order: 4100
+method: GET
+url: '{{baseUrl}}/inventory?status=Available&pageSize=5'
+description: Filter inventory to Available units only.

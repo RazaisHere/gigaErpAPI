@@ -1,0 +1,20 @@
+$kind: http-request
+name: Me profile
+order: 1000
+method: GET
+url: '{{baseUrl}}/me/profile'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{approvedClientToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('approved link', () => {
+        pm.expect(j.link.verificationStatus).to.eql('approved');
+        pm.expect(j.user.roleCode).to.eql('client');
+      });

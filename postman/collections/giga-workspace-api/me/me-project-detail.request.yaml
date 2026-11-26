@@ -1,0 +1,17 @@
+$kind: http-request
+name: Me project detail
+order: 1600
+method: GET
+url: '{{baseUrl}}/me/projects/{{meProjectId}}'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{approvedClientToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('units list', () => pm.expect(j.units).to.be.an('array'));

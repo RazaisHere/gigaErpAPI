@@ -1,0 +1,17 @@
+$kind: http-request
+name: Report — collections
+order: 4000
+method: GET
+url: '{{baseUrl}}/reports/collections'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('summary keys', () => {
+        pm.expect(j.outstanding).to.be.an('object');
+        pm.expect(j.upcomingDues90Days).to.be.an('object');
+        pm.expect(j.receiptsLast30Days).to.be.an('object');
+        pm.expect(j.surcharges).to.be.an('object');
+      });

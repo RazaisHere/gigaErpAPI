@@ -1,0 +1,17 @@
+$kind: http-request
+name: Me portfolio
+order: 2000
+method: GET
+url: '{{baseUrl}}/me/portfolio?page=1&pageSize=10'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{approvedClientToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('paged', () => pm.expect(j.data).to.be.an('array'));

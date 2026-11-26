@@ -1,0 +1,17 @@
+$kind: http-request
+name: Dashboard overview
+order: 1000
+method: GET
+url: '{{baseUrl}}/dashboard/overview'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('has kpis + chart', () => {
+        pm.expect(j.kpis).to.be.an('object');
+        pm.expect(j.kpis).to.have.property('openCases');
+        pm.expect(j.charts.casesOpenedLast14Days).to.be.an('array');
+        pm.expect(j.charts.casesOpenedLast14Days).to.have.length(14);
+      });

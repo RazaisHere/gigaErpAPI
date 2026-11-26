@@ -1,0 +1,13 @@
+$kind: http-request
+name: List case categories
+order: 2000
+method: GET
+url: '{{baseUrl}}/case-categories'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('status 200', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('array', () => pm.expect(j).to.be.an('array'));
+      if (j[0]) pm.collectionVariables.set('categoryId', String(j[0].id));

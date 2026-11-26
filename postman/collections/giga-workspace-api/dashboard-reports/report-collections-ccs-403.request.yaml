@@ -1,0 +1,15 @@
+$kind: http-request
+name: Report collections — CCS expect 403
+order: 6000
+method: GET
+url: '{{baseUrl}}/reports/collections'
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{ayeshaToken}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('blocked for CCS (403)', () => pm.response.to.have.status(403));

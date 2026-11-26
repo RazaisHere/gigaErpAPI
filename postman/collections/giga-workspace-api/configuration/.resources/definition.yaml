@@ -1,0 +1,4 @@
+$kind: collection
+name: Configuration
+order: 9000
+description: Phase 7 — case categories, SLA rules, notification templates.

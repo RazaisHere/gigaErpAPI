@@ -1,0 +1,4 @@
+$kind: collection
+name: Client portal
+order: 11000
+description: Phase 9 — /me profile, portfolio, dues, receipts, surcharges (approved client only).

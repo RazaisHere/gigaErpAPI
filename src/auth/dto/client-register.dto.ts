@@ -1,18 +1,26 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsString } from 'class-validator';
 import {
   IsPakistaniCnic,
   IsPakistaniMobile,
 } from '../../clients/validators/pk-contact.validator';
+import {
+  COGNITO_PASSWORD_REQUIREMENTS_MESSAGE,
+  IsCognitoPassword,
+} from '../utils/cognito-password.policy';
 
 export class ClientRegisterDto {
   @ApiProperty({ example: 'new.client@example.com' })
   @IsEmail()
   email!: string;
 
-  @ApiProperty({ minLength: 8, example: 'Workspace@123' })
+  @ApiProperty({
+    minLength: 8,
+    example: 'Num123456@@@',
+    description: COGNITO_PASSWORD_REQUIREMENTS_MESSAGE,
+  })
   @IsString()
-  @MinLength(8)
+  @IsCognitoPassword()
   password!: string;
 
   @ApiProperty({ example: '21104-4733982-1' })
